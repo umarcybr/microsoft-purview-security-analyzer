@@ -7,6 +7,18 @@ import os
 import json
 from security_analyzer import parse_audit_logs, detect_compromised_events, filter_files_accessed, filter_anomalous_ips
 
+# Initialize session state variables to store processed data between re-renders
+if 'processed' not in st.session_state:
+    st.session_state.processed = False
+if 'timeline' not in st.session_state:
+    st.session_state.timeline = None
+if 'compromised_events' not in st.session_state:
+    st.session_state.compromised_events = None
+if 'files_accessed' not in st.session_state:
+    st.session_state.files_accessed = None
+if 'anomalous_ips' not in st.session_state:
+    st.session_state.anomalous_ips = None
+
 # Set page configuration
 st.set_page_config(
     page_title="Security Analysis Tool",
@@ -95,46 +107,76 @@ def create_map(anomalous_ips):
     
     return m
 
+# Function to process the data (only runs when we need to)
+def process_data(file_path):
+    # Set up a progress bar for file processing
+    progress_bar = st.progress(0)
+    status_text = st.empty()
+    
+    # Process the file with progress updates
+    status_text.text("Reading and parsing the file...")
+    progress_bar.progress(10)
+    
+    # Parse the audit logs with our optimized geolocation service
+    timeline = parse_audit_logs(file_path)
+    
+    if not timeline:
+        progress_bar.progress(100)
+        status_text.text("")
+        st.error("No data could be processed from the file. Please check the file format.")
+        return False
+    
+    status_text.text("Processing IP geolocation data...")
+    progress_bar.progress(50)
+    
+    # Continue with analysis
+    status_text.text("Analyzing anomalies and generating insights...")
+    progress_bar.progress(80)
+    
+    # Extract insights
+    compromised_events = detect_compromised_events(timeline)
+    files_accessed = filter_files_accessed(timeline)
+    anomalous_ips = filter_anomalous_ips(timeline)
+    
+    # Store results in session state
+    st.session_state.timeline = timeline
+    st.session_state.compromised_events = compromised_events
+    st.session_state.files_accessed = files_accessed
+    st.session_state.anomalous_ips = anomalous_ips
+    st.session_state.processed = True
+    
+    # Complete the progress bar
+    progress_bar.progress(100)
+    status_text.text("")
+    st.success(f"Successfully processed {len(timeline)} events.")
+    return True
+
 # Main application logic
 if uploaded_file is not None:
     try:
-        # Save uploaded file temporarily
-        temp_file_path = save_uploaded_file(uploaded_file)
+        # Reset session state if a new file is uploaded
+        current_file = getattr(st.session_state, 'current_file', None) 
+        if current_file != uploaded_file.name:
+            st.session_state.processed = False
+            st.session_state.current_file = uploaded_file.name
         
-        # Check file extension to determine how to read it
-        file_ext = os.path.splitext(uploaded_file.name)[1].lower()
+        # Only process the file if we haven't already done so for this file
+        if not st.session_state.processed:
+            # Save uploaded file temporarily
+            temp_file_path = save_uploaded_file(uploaded_file)
+            # Process the file
+            process_data(temp_file_path)
+            # Clean up temporary file when done
+            if temp_file_path and os.path.exists(temp_file_path):
+                os.unlink(temp_file_path)
         
-        # Set up a progress bar for file processing
-        progress_bar = st.progress(0)
-        status_text = st.empty()
-        
-        # Process the file with progress updates
-        status_text.text("Reading and parsing the file...")
-        progress_bar.progress(10)
-        
-        # Parse the audit logs with our optimized geolocation service
-        timeline = parse_audit_logs(temp_file_path)
-        
-        if not timeline:
-            progress_bar.progress(100)
-            st.error("No data could be processed from the file. Please check the file format.")
-        else:
-            status_text.text("Processing IP geolocation data...")
-            progress_bar.progress(50)
-            
-            # Continue with analysis
-            status_text.text("Analyzing anomalies and generating insights...")
-            progress_bar.progress(80)
-            
-            # Complete the progress bar
-            progress_bar.progress(100)
-            status_text.text("")
-            st.success(f"Successfully processed {len(timeline)} events.")
-            
-            # Extract insights
-            compromised_events = detect_compromised_events(timeline)
-            files_accessed = filter_files_accessed(timeline)
-            anomalous_ips = filter_anomalous_ips(timeline)
+        # If processing was successful, display the results
+        if st.session_state.processed:
+            # Get data from session state
+            timeline = st.session_state.timeline
+            compromised_events = st.session_state.compromised_events
+            files_accessed = st.session_state.files_accessed
+            anomalous_ips = st.session_state.anomalous_ips
             
             # Display summary statistics
             col1, col2, col3, col4 = st.columns(4)
@@ -216,10 +258,6 @@ if uploaded_file is not None:
                 file_name="security_analysis_results.json",
                 mime="application/json"
             )
-            
-            # Clean up temporary file
-            if temp_file_path and os.path.exists(temp_file_path):
-                os.unlink(temp_file_path)
     
     except Exception as e:
         st.error(f"An error occurred during processing: {str(e)}")

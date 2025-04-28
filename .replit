@@ -18,10 +18,10 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "SecurityAnalysisApp"
+args = "LTI_Vericel_Security_Analyzer"
 
 [[workflows.workflow]]
-name = "SecurityAnalysisApp"
+name = "LTI_Vericel_Security_Analyzer"
 author = "agent"
 
 [[workflows.workflow.tasks]]

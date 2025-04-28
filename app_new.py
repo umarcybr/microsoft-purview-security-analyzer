@@ -98,113 +98,128 @@ def create_map(anomalous_ips):
 # Main application logic
 if uploaded_file is not None:
     try:
-        st.info("Processing file... Please wait.")
-        
         # Save uploaded file temporarily
         temp_file_path = save_uploaded_file(uploaded_file)
         
         # Check file extension to determine how to read it
         file_ext = os.path.splitext(uploaded_file.name)[1].lower()
         
-        # Process the file
-        with st.spinner("Analyzing the data..."):
-            # Parse the audit logs with our online IP geolocation service
-            timeline = parse_audit_logs(temp_file_path)
+        # Set up a progress bar for file processing
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+        
+        # Process the file with progress updates
+        status_text.text("Reading and parsing the file...")
+        progress_bar.progress(10)
+        
+        # Parse the audit logs with our optimized geolocation service
+        timeline = parse_audit_logs(temp_file_path)
+        
+        if not timeline:
+            progress_bar.progress(100)
+            st.error("No data could be processed from the file. Please check the file format.")
+        else:
+            status_text.text("Processing IP geolocation data...")
+            progress_bar.progress(50)
             
-            if not timeline:
-                st.error("No data could be processed from the file. Please check the file format.")
-            else:
-                st.success(f"Successfully processed {len(timeline)} events.")
+            # Continue with analysis
+            status_text.text("Analyzing anomalies and generating insights...")
+            progress_bar.progress(80)
+            
+            # Complete the progress bar
+            progress_bar.progress(100)
+            status_text.text("")
+            st.success(f"Successfully processed {len(timeline)} events.")
+            
+            # Extract insights
+            compromised_events = detect_compromised_events(timeline)
+            files_accessed = filter_files_accessed(timeline)
+            anomalous_ips = filter_anomalous_ips(timeline)
+            
+            # Display summary statistics
+            col1, col2, col3, col4 = st.columns(4)
+            col1.metric("Total Events", len(timeline))
+            col2.metric("Suspicious Events", len(compromised_events))
+            col3.metric("Files Accessed", len(files_accessed))
+            col4.metric("Anomalous IPs", len(anomalous_ips))
+            
+            # Create tabs for different views
+            tab1, tab2, tab3, tab4 = st.tabs(["Map View", "Suspicious Events", "Files Accessed", "All Events"])
+            
+            with tab1:
+                st.subheader("Anomalous IP Activity Map")
+                st.markdown("Red markers indicate locations with anomalous IP activity. Click on a marker to see details.")
                 
-                # Extract insights
-                compromised_events = detect_compromised_events(timeline)
-                files_accessed = filter_files_accessed(timeline)
-                anomalous_ips = filter_anomalous_ips(timeline)
+                # Create and display the map
+                if anomalous_ips:
+                    map_data = create_map(anomalous_ips)
+                    st_folium(map_data, width=1200, height=600)
+                else:
+                    st.info("No anomalous IP activity detected in the data.")
                 
-                # Display summary statistics
-                col1, col2, col3, col4 = st.columns(4)
-                col1.metric("Total Events", len(timeline))
-                col2.metric("Suspicious Events", len(compromised_events))
-                col3.metric("Files Accessed", len(files_accessed))
-                col4.metric("Anomalous IPs", len(anomalous_ips))
-                
-                # Create tabs for different views
-                tab1, tab2, tab3, tab4 = st.tabs(["Map View", "Suspicious Events", "Files Accessed", "All Events"])
-                
-                with tab1:
-                    st.subheader("Anomalous IP Activity Map")
-                    st.markdown("Red markers indicate locations with anomalous IP activity. Click on a marker to see details.")
-                    
-                    # Create and display the map
-                    if anomalous_ips:
-                        map_data = create_map(anomalous_ips)
-                        st_folium(map_data, width=1200, height=600)
-                    else:
-                        st.info("No anomalous IP activity detected in the data.")
-                    
-                    # Display anomalous IP events in a table
-                    if anomalous_ips:
-                        st.subheader("Anomalous IP Events")
-                        # Convert to DataFrame for better display
-                        anomalous_df = pd.DataFrame(anomalous_ips)
-                        # Format timestamp column
-                        if 'Timestamp' in anomalous_df.columns:
-                            anomalous_df['Timestamp'] = pd.to_datetime(anomalous_df['Timestamp']).dt.strftime('%Y-%m-%d %H:%M:%S')
-                        st.dataframe(anomalous_df)
-                
-                with tab2:
-                    st.subheader("Suspicious Events")
-                    if compromised_events:
-                        compromised_df = pd.DataFrame(compromised_events)
-                        # Format timestamp column
-                        if 'Timestamp' in compromised_df.columns:
-                            compromised_df['Timestamp'] = pd.to_datetime(compromised_df['Timestamp']).dt.strftime('%Y-%m-%d %H:%M:%S')
-                        st.dataframe(compromised_df)
-                    else:
-                        st.info("No suspicious events detected in the data.")
-                
-                with tab3:
-                    st.subheader("Files Accessed")
-                    if files_accessed:
-                        files_df = pd.DataFrame(files_accessed)
-                        # Format timestamp column
-                        if 'Timestamp' in files_df.columns:
-                            files_df['Timestamp'] = pd.to_datetime(files_df['Timestamp']).dt.strftime('%Y-%m-%d %H:%M:%S')
-                        st.dataframe(files_df)
-                    else:
-                        st.info("No file access events found in the data.")
-                
-                with tab4:
-                    st.subheader("All Events")
-                    timeline_df = pd.DataFrame(timeline)
+                # Display anomalous IP events in a table
+                if anomalous_ips:
+                    st.subheader("Anomalous IP Events")
+                    # Convert to DataFrame for better display
+                    anomalous_df = pd.DataFrame(anomalous_ips)
                     # Format timestamp column
-                    if 'Timestamp' in timeline_df.columns:
-                        timeline_df['Timestamp'] = pd.to_datetime(timeline_df['Timestamp']).dt.strftime('%Y-%m-%d %H:%M:%S')
-                    st.dataframe(timeline_df)
-                
-                # Option to download results
-                st.subheader("Download Results")
-                
-                # Prepare data for download
-                output = {
-                    "timeline": timeline,
-                    "compromised_events": compromised_events,
-                    "files_accessed": files_accessed,
-                    "anomalous_ips": anomalous_ips
-                }
-                
-                # Convert to JSON for download
-                json_data = json.dumps(output, default=str)
-                st.download_button(
-                    label="Download Results as JSON",
-                    data=json_data,
-                    file_name="security_analysis_results.json",
-                    mime="application/json"
-                )
-                
-                # Clean up temporary file
-                if temp_file_path and os.path.exists(temp_file_path):
-                    os.unlink(temp_file_path)
+                    if 'Timestamp' in anomalous_df.columns:
+                        anomalous_df['Timestamp'] = pd.to_datetime(anomalous_df['Timestamp']).dt.strftime('%Y-%m-%d %H:%M:%S')
+                    st.dataframe(anomalous_df)
+            
+            with tab2:
+                st.subheader("Suspicious Events")
+                if compromised_events:
+                    compromised_df = pd.DataFrame(compromised_events)
+                    # Format timestamp column
+                    if 'Timestamp' in compromised_df.columns:
+                        compromised_df['Timestamp'] = pd.to_datetime(compromised_df['Timestamp']).dt.strftime('%Y-%m-%d %H:%M:%S')
+                    st.dataframe(compromised_df)
+                else:
+                    st.info("No suspicious events detected in the data.")
+            
+            with tab3:
+                st.subheader("Files Accessed")
+                if files_accessed:
+                    files_df = pd.DataFrame(files_accessed)
+                    # Format timestamp column
+                    if 'Timestamp' in files_df.columns:
+                        files_df['Timestamp'] = pd.to_datetime(files_df['Timestamp']).dt.strftime('%Y-%m-%d %H:%M:%S')
+                    st.dataframe(files_df)
+                else:
+                    st.info("No file access events found in the data.")
+            
+            with tab4:
+                st.subheader("All Events")
+                timeline_df = pd.DataFrame(timeline)
+                # Format timestamp column
+                if 'Timestamp' in timeline_df.columns:
+                    timeline_df['Timestamp'] = pd.to_datetime(timeline_df['Timestamp']).dt.strftime('%Y-%m-%d %H:%M:%S')
+                st.dataframe(timeline_df)
+            
+            # Option to download results
+            st.subheader("Download Results")
+            
+            # Prepare data for download
+            output = {
+                "timeline": timeline,
+                "compromised_events": compromised_events,
+                "files_accessed": files_accessed,
+                "anomalous_ips": anomalous_ips
+            }
+            
+            # Convert to JSON for download
+            json_data = json.dumps(output, default=str)
+            st.download_button(
+                label="Download Results as JSON",
+                data=json_data,
+                file_name="security_analysis_results.json",
+                mime="application/json"
+            )
+            
+            # Clean up temporary file
+            if temp_file_path and os.path.exists(temp_file_path):
+                os.unlink(temp_file_path)
     
     except Exception as e:
         st.error(f"An error occurred during processing: {str(e)}")

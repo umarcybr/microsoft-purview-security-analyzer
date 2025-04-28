@@ -1,15 +1,51 @@
 import pandas as pd
 import json
-import geoip2.database
 import os
+import requests
+import time
 
-def parse_audit_logs(file_path, geoip_db_path="GeoLite2-City.mmdb"):
+def get_ip_geolocation(ip):
+    """
+    Get geolocation data for an IP address using ip-api.com free service.
+    
+    Parameters:
+    ip (str): IP address
+    
+    Returns:
+    dict: Geolocation data (country, region, city, latitude, longitude)
+    """
+    url = f"http://ip-api.com/json/{ip}"
+    try:
+        response = requests.get(url)
+        if response.status_code == 200:
+            data = response.json()
+            if data.get('status') == 'success':
+                return {
+                    'Country': data.get('countryCode', 'Unknown'),
+                    'Region': data.get('regionName', 'Unknown'),
+                    'City': data.get('city', 'Unknown'),
+                    'Latitude': data.get('lat', 0),
+                    'Longitude': data.get('lon', 0)
+                }
+    except Exception as e:
+        print(f"Error getting geolocation for IP {ip}: {e}")
+    
+    # Default values if geolocation fails
+    return {
+        'Country': 'Unknown',
+        'Region': 'Unknown',
+        'City': 'Unknown',
+        'Latitude': 0,
+        'Longitude': 0
+    }
+
+def parse_audit_logs(file_path, geoip_db_path=None):
     """
     Parse audit logs from CSV or Excel file and return a timeline of events with geolocation data.
     
     Parameters:
     file_path (str): Path to the input CSV or Excel file
-    geoip_db_path (str): Path to the GeoLite2-City.mmdb database file
+    geoip_db_path (str): Not used anymore, kept for backward compatibility
     
     Returns:
     list: Timeline of events with geolocation data
@@ -37,15 +73,11 @@ def parse_audit_logs(file_path, geoip_db_path="GeoLite2-City.mmdb"):
         df['CreationDate'] = pd.to_datetime(df['CreationDate'])
         df = df.sort_values(by='CreationDate')
 
-        # Open the GeoLite2 database
-        try:
-            geo_reader = geoip2.database.Reader(geoip_db_path) if geoip_db_path else None
-        except Exception as ge:
-            print(f"Error opening GeoIP database: {ge}")
-            geo_reader = None
-
         # Parse AuditData and create a timeline with geolocation data
         timeline = []
+        # Keep track of IPs we've already looked up to avoid repeated API calls
+        ip_geo_cache = {}
+        
         for _, row in df.iterrows():
             try:
                 # Check if AuditData is a string, if so, parse it
@@ -72,40 +104,34 @@ def parse_audit_logs(file_path, geoip_db_path="GeoLite2-City.mmdb"):
 
                 # Lookup geolocation info for the IP (if possible)
                 ip = event['ClientIP']
-                if geo_reader and ip != 'N/A':
-                    try:
-                        response = geo_reader.city(ip)
-                        country = response.country.iso_code if response.country.iso_code else "Unknown"
-                        region = response.subdivisions.most_specific.name if response.subdivisions.most_specific.name else "Unknown"
-                        city = response.city.name if response.city.name else "Unknown"
-                        latitude = response.location.latitude if response.location.latitude else 0
-                        longitude = response.location.longitude if response.location.longitude else 0
-                        
-                        event['Country'] = country
-                        event['Region'] = region
-                        event['City'] = city
-                        event['Latitude'] = latitude
-                        event['Longitude'] = longitude
-                    except Exception as e:
-                        event['Country'] = "Unknown"
-                        event['Region'] = "Unknown"
-                        event['City'] = "Unknown"
-                        event['Latitude'] = 0
-                        event['Longitude'] = 0
+                
+                # Skip private IPs or invalid values
+                if ip == 'N/A' or ip.startswith('192.168.') or ip.startswith('10.') or ip.startswith('172.16.'):
+                    event.update({
+                        'Country': 'Unknown',
+                        'Region': 'Unknown',
+                        'City': 'Unknown',
+                        'Latitude': 0,
+                        'Longitude': 0
+                    })
                 else:
-                    event['Country'] = "Unknown"
-                    event['Region'] = "Unknown"
-                    event['City'] = "Unknown"
-                    event['Latitude'] = 0
-                    event['Longitude'] = 0
+                    # Check if we already have this IP's geolocation info in our cache
+                    if ip in ip_geo_cache:
+                        geo_data = ip_geo_cache[ip]
+                    else:
+                        # Lookup the IP using the API and add to cache
+                        geo_data = get_ip_geolocation(ip)
+                        ip_geo_cache[ip] = geo_data
+                        # Sleep to avoid API rate limits (15 requests per minute)
+                        time.sleep(0.1)
+                    
+                    # Update the event with geolocation data
+                    event.update(geo_data)
 
                 timeline.append(event)
             except json.JSONDecodeError:
                 print(f"Error parsing AuditData for record at {row['CreationDate']}")
         
-        if geo_reader:
-            geo_reader.close()
-
         return timeline
 
     except Exception as e:

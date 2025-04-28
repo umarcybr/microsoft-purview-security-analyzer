@@ -108,14 +108,8 @@ if uploaded_file is not None:
         
         # Process the file
         with st.spinner("Analyzing the data..."):
-            # Look for GeoLite2-City.mmdb in the current directory
-            geoip_db_path = "GeoLite2-City.mmdb"
-            if not os.path.exists(geoip_db_path):
-                st.warning(f"GeoLite2-City.mmdb not found. IP geolocation will be limited.")
-                geoip_db_path = None
-                
-            # Parse the audit logs
-            timeline = parse_audit_logs(temp_file_path, geoip_db_path)
+            # Parse the audit logs with our online IP geolocation service
+            timeline = parse_audit_logs(temp_file_path)
             
             if not timeline:
                 st.error("No data could be processed from the file. Please check the file format.")

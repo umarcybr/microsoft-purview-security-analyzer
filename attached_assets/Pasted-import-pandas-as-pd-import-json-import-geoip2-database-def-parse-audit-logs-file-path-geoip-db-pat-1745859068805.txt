@@ -1,0 +1,155 @@
+import pandas as pd
+import json
+import geoip2.database
+
+def parse_audit_logs(file_path, geoip_db_path="GeoLite2-City.mmdb"):
+    try:
+        df = pd.read_csv("data_fmurphy_all.csv")
+
+        # Select relevant columns
+        columns_of_interest = ['CreationDate', 'Operation', 'UserId', 'AuditData']
+        df = df[columns_of_interest]
+
+        # Convert CreationDate to datetime for sorting
+        df['CreationDate'] = pd.to_datetime(df['CreationDate'])
+        df = df.sort_values(by='CreationDate')
+
+        # Open the GeoLite2 database
+        try:
+            geo_reader = geoip2.database.Reader(geoip_db_path)
+        except Exception as ge:
+            print("NO MMDB file")
+            geo_reader = None
+
+        # Parse AuditData and create a timeline with geolocation data
+        timeline = []
+        for _, row in df.iterrows():
+            try:
+                audit_data = json.loads(row['AuditData'])
+                event = {
+                    'Timestamp': row['CreationDate'],
+                    'Operation': row['Operation'],
+                    'UserId': row['UserId'],
+                    'ClientIP': audit_data.get('ClientIP', 'N/A'),
+                    'ResultStatus': audit_data.get('ResultStatus', 'N/A')
+                }
+                # For FileAccessed evnts, extract the file name if available
+                if row['Operation'] == 'FileAccessed':
+                    event['FileName'] = audit_data.get('SourceFileName', 'N/A')
+                else:
+                    event['FileName'] = ''
+
+                # Lookup geolocati info for the IP (if possible)
+                ip = event['ClientIP']
+                if geo_reader and ip != 'N/A':
+                    try:
+                        response = geo_reader.city(ip)
+                        country = response.country.iso_code if response.country.iso_code else "Unknown"
+                        region = response.subdivisions.most_specific.name if response.subdivisions.most_specific.name else "Unknown"
+                        event['Country'] = country
+                        event['Region'] = region
+                    except Exception as e:
+                        event['Country'] = "Unknown"
+                        event['Region'] = "Unknown"
+                else:
+                    event['Country'] = "Unknown"
+                    event['Region'] = "Unknown"
+
+                timeline.append(event)
+            except json.JSONDecodeError:
+                print(f"Error parsing AuditData for record at {row['CreationDate']}")
+        
+        if geo_reader:
+            geo_reader.close()
+
+        return timeline
+
+    except Exception as e:
+        print(f"Error churning file: {e}")
+        return []
+
+def is_ip_anomalous(event):
+    """
+    Returns True if the event's IP is considered anomalous.
+    An IP is NOT anomalous if it is exactly '192.168.1.160' (Frans usual IP).
+    Otherwise, if the geolocated Country is not 'US' or the Region is not 'Massachusetts',
+    then the event is considered anomalous.
+    """
+    ip = event.get('ClientIP', 'N/A')
+    if ip == '192.168.1.160':
+        return False
+    country = event.get('Country', "Unknown")
+    region = event.get('Region', "Unknown")
+    # If the country is not usa or region is not Mass, flag as anomalous
+    if country != 'US' or region != 'Massachusetts':
+        return True
+    return False
+
+def detect_compromised_events(timeline):
+    """
+    Returns events exhibiting suspicious activity AND having an anomalous IP.
+    Suspicious activity is defined as:
+      - Operation is either 'SoftDelete' or 'MoveToDeletedItems'
+      OR
+      - The user has logged in from more than 3 unique IP addresses.
+    """
+    suspicious_ops = ['SoftDelete', 'MoveToDeletedItems']
+    compromised_events = []
+    user_ip_map = {}
+
+    # First, build a map of unique IP addresses
+    for event in timeline:
+        user_id = event['UserId']
+        client_ip = event['ClientIP']
+        if user_id not in user_ip_map:
+            user_ip_map[user_id] = set()
+        user_ip_map[user_id].add(client_ip)
+
+    # Flag an event as compromised if it looks like suspicious activity and has a weird IP
+    for event in timeline:
+        user_id = event['UserId']
+        suspicious_activity = (event['Operation'] in suspicious_ops or len(user_ip_map[user_id]) > 3)
+        if suspicious_activity and is_ip_anomalous(event):
+            compromised_events.append(event)
+    return compromised_events
+
+def filter_files_accessed(timeline):
+    """Return events where the operation is 'FileAccessed'."""
+    return [event for event in timeline if event['Operation'] == 'FileAccessed']
+
+def filter_anomalous_ips(timeline):
+    """Return only events where the IP is considered anomalous per our criteria."""
+    return [event for event in timeline if is_ip_anomalous(event)]
+
+def save_to_excel(output_file, timeline, compromised_events, files_accessed, anomalous_ips):
+    try:
+        # Create DataFrames from the lists of dictionaries
+        timeline_df = pd.DataFrame(timeline)
+        compromised_events_df = pd.DataFrame(compromised_events)
+        files_accessed_df = pd.DataFrame(files_accessed)
+        anomalous_ips_df = pd.DataFrame(anomalous_ips)
+
+        # Write to Excel in multiple sheets without custom cell formatting.
+        with pd.ExcelWriter(output_file, engine='openpyxl') as writer:
+            timeline_df.to_excel(writer, sheet_name='Timeline', index=False)
+            compromised_events_df.to_excel(writer, sheet_name='Suspicious Events', index=False)
+            files_accessed_df.to_excel(writer, sheet_name='FilesAccessed', index=False)
+            anomalous_ips_df.to_excel(writer, sheet_name='AnomalousIPs', index=False)
+            # would be cool to have the custom formatting depending on type of data
+
+        print(f"Results successfully written to {output_file}")
+
+    except Exception as e:
+        print(f"Error writing to Excel file: {e}")
+
+if __name__ == "__main__":
+    # Update file paths as necessary.
+    input_file = "C:\\Users\\umar\\Documents\\fmurphy_data.csv"
+    output_file = "output_fmurphy.xlsx"
+
+    timeline = parse_audit_logs(input_file)
+    compromised_events = detect_compromised_events(timeline)
+    files_accessed = filter_files_accessed(timeline)
+    anomalous_ips = filter_anomalous_ips(timeline)
+
+    save_to_excel(output_file, timeline, compromised_events, files_accessed, anomalous_ips)

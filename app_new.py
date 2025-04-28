@@ -164,19 +164,22 @@ if uploaded_file is not None:
         if not st.session_state.processed:
             # Save uploaded file temporarily
             temp_file_path = save_uploaded_file(uploaded_file)
-            # Process the file
-            process_data(temp_file_path)
-            # Clean up temporary file when done
-            if temp_file_path and os.path.exists(temp_file_path):
-                os.unlink(temp_file_path)
+            # Process the file only if we have a valid file path
+            if temp_file_path:
+                process_data(temp_file_path)
+                # Clean up temporary file when done
+                if os.path.exists(temp_file_path):
+                    os.unlink(temp_file_path)
+            else:
+                st.error("Failed to save uploaded file. Please try again.")
         
         # If processing was successful, display the results
-        if st.session_state.processed:
+        if st.session_state.processed and st.session_state.timeline is not None:
             # Get data from session state
             timeline = st.session_state.timeline
-            compromised_events = st.session_state.compromised_events
-            files_accessed = st.session_state.files_accessed
-            anomalous_ips = st.session_state.anomalous_ips
+            compromised_events = st.session_state.compromised_events or []
+            files_accessed = st.session_state.files_accessed or []
+            anomalous_ips = st.session_state.anomalous_ips or []
             
             # Display summary statistics
             col1, col2, col3, col4 = st.columns(4)

@@ -2,6 +2,8 @@
 
 The Microsoft Purview Security Analyzer is a web-based security analysis tool built with Streamlit that processes audit log files (CSV/Excel) to identify anomalous IP activities and potential security breaches. The application provides interactive geospatial mapping capabilities to visualize suspicious activities on a world map, helping security analysts identify potentially compromised events and unusual access patterns.
 
+![App Preview](images/app-preview.png)
+
 # User Preferences
 
 Preferred communication style: Simple, everyday language.

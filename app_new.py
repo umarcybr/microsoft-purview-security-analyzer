@@ -5,7 +5,7 @@ from streamlit_folium import st_folium
 import tempfile
 import os
 import json
-from security_analyzer import parse_audit_logs, detect_compromised_events, filter_files_accessed, filter_anomalous_ips
+from security_analyzer import parse_audit_logs, detect_compromised_events, filter_files_accessed, filter_anomalous_ips, apply_filters
 
 # Initialize session state variables to store processed data between re-renders
 if 'processed' not in st.session_state:
@@ -35,6 +35,90 @@ Upload your CSV or Excel file to analyze the data and visualize suspicious activ
 
 # Add file upload widget
 uploaded_file = st.file_uploader("Upload CSV or Excel file", type=["csv", "xlsx", "xls"])
+
+# Add filtering options in sidebar
+st.sidebar.header("🔍 Anomaly Filters")
+st.sidebar.markdown("Customize which types of anomalies to display:")
+
+# Initialize filter states if not already set
+if 'filter_by_risk_level' not in st.session_state:
+    st.session_state.filter_by_risk_level = ['High', 'Medium', 'Low']
+if 'filter_by_operation' not in st.session_state:
+    st.session_state.filter_by_operation = []
+if 'filter_by_country' not in st.session_state:
+    st.session_state.filter_by_country = []
+if 'filter_by_date_range' not in st.session_state:
+    st.session_state.filter_by_date_range = False
+
+# Risk Level Filter
+st.sidebar.subheader("Risk Level")
+risk_levels = st.sidebar.multiselect(
+    "Select risk levels to display:",
+    options=['High', 'Medium', 'Low'],
+    default=st.session_state.filter_by_risk_level,
+    key='risk_filter'
+)
+st.session_state.filter_by_risk_level = risk_levels
+
+# Anomaly Type Filter
+st.sidebar.subheader("Anomaly Types")
+anomaly_types = st.sidebar.multiselect(
+    "Select anomaly types:",
+    options=['Geographic Anomaly', 'Time Anomaly', 'Access Pattern Anomaly', 'Failed Authentication', 'Privilege Escalation'],
+    default=[],
+    key='anomaly_type_filter'
+)
+
+# Geographic Filter
+st.sidebar.subheader("Geographic Filter")
+enable_geo_filter = st.sidebar.checkbox("Filter by geographic location", value=False)
+if enable_geo_filter:
+    excluded_countries = st.sidebar.multiselect(
+        "Exclude countries:",
+        options=['Unknown', 'Local', 'US', 'CA', 'GB', 'DE', 'FR', 'JP', 'AU'],
+        default=['Local'],
+        help="Select countries to exclude from results"
+    )
+else:
+    excluded_countries = []
+
+# Time-based Filter
+st.sidebar.subheader("Time Filter")
+enable_time_filter = st.sidebar.checkbox("Filter by time period", value=False)
+if enable_time_filter:
+    time_filter_type = st.sidebar.selectbox(
+        "Time filter type:",
+        options=['Business Hours Only', 'Outside Business Hours', 'Weekends Only', 'Custom Range']
+    )
+    if time_filter_type == 'Custom Range':
+        col1, col2 = st.sidebar.columns(2)
+        with col1:
+            start_time = st.time_input("Start time", value=None)
+        with col2:
+            end_time = st.time_input("End time", value=None)
+else:
+    time_filter_type = None
+
+# IP Pattern Filter
+st.sidebar.subheader("IP Pattern Filter")
+enable_ip_filter = st.sidebar.checkbox("Filter by IP patterns", value=False)
+if enable_ip_filter:
+    ip_filter_options = st.sidebar.multiselect(
+        "IP pattern types:",
+        options=['First-time IPs', 'Frequent IPs', 'Single-use IPs', 'Cross-country IPs'],
+        default=[],
+        help="Filter based on IP usage patterns"
+    )
+else:
+    ip_filter_options = []
+
+# Reset filters button
+if st.sidebar.button("Reset All Filters"):
+    st.session_state.filter_by_risk_level = ['High', 'Medium', 'Low']
+    st.session_state.filter_by_operation = []
+    st.session_state.filter_by_country = []
+    st.session_state.filter_by_date_range = False
+    st.rerun()
 
 # Function to save uploaded file temporarily
 def save_uploaded_file(uploaded_file):
@@ -181,9 +265,63 @@ if uploaded_file is not None:
             files_accessed = st.session_state.files_accessed or []
             anomalous_ips = st.session_state.anomalous_ips or []
             
+            # Apply custom filters
+            filter_config = {
+                'risk_levels': risk_levels,
+                'anomaly_types': anomaly_types,
+                'excluded_countries': excluded_countries,
+                'time_filter_type': time_filter_type if enable_time_filter else None,
+                'ip_filter_options': ip_filter_options if enable_ip_filter else [],
+            }
+            
+            # Add custom time range if applicable
+            if enable_time_filter and time_filter_type == 'Custom Range':
+                if 'start_time' in locals() and 'end_time' in locals():
+                    filter_config['start_time'] = start_time
+                    filter_config['end_time'] = end_time
+            
+            # Apply filters to each dataset
+            filtered_compromised = apply_filters(compromised_events, filter_config)
+            filtered_files_accessed = apply_filters(files_accessed, filter_config) 
+            filtered_anomalous_ips = apply_filters(anomalous_ips, filter_config)
+            filtered_timeline = apply_filters(timeline, filter_config)
+            
+            # Update variables to use filtered data
+            compromised_events = filtered_compromised
+            files_accessed = filtered_files_accessed
+            anomalous_ips = filtered_anomalous_ips
+            timeline_filtered = filtered_timeline
+            
+            # Display filter summary if filters are active
+            active_filters = []
+            if risk_levels and len(risk_levels) < 3:
+                active_filters.append(f"Risk: {', '.join(risk_levels)}")
+            if anomaly_types:
+                active_filters.append(f"Types: {', '.join(anomaly_types)}")
+            if excluded_countries:
+                active_filters.append(f"Excluded: {', '.join(excluded_countries)}")
+            if enable_time_filter:
+                active_filters.append(f"Time: {time_filter_type}")
+            if enable_ip_filter and ip_filter_options:
+                active_filters.append(f"IP: {', '.join(ip_filter_options)}")
+            
+            if active_filters:
+                st.info(f"🔍 **Active Filters:** {' | '.join(active_filters)}")
+            
+            # Add legend for risk levels
+            st.markdown("""
+            **Risk Level Legend:**
+            <div style="display: flex; gap: 20px; margin: 10px 0;">
+                <span style="background-color: #ff4444; color: white; padding: 4px 8px; border-radius: 4px;">High Risk</span>
+                <span style="background-color: #ff8800; color: white; padding: 4px 8px; border-radius: 4px;">Medium Risk</span>
+                <span style="background-color: #44aa44; color: white; padding: 4px 8px; border-radius: 4px;">Low Risk</span>
+            </div>
+            """, unsafe_allow_html=True)
+            
             # Display summary statistics
             col1, col2, col3, col4 = st.columns(4)
-            col1.metric("Total Events", len(timeline))
+            total_before = len(st.session_state.timeline)
+            col1.metric("Total Events", f"{len(timeline_filtered)}", delta=f"{len(timeline_filtered) - total_before}" if active_filters else None)
             col2.metric("Suspicious Events", len(compromised_events))
             col3.metric("Files Accessed", len(files_accessed))
             col4.metric("Anomalous IPs", len(anomalous_ips))
@@ -210,7 +348,21 @@ if uploaded_file is not None:
                     # Format timestamp column
                     if 'Timestamp' in anomalous_df.columns:
                         anomalous_df['Timestamp'] = pd.to_datetime(anomalous_df['Timestamp']).dt.strftime('%Y-%m-%d %H:%M:%S')
-                    st.dataframe(anomalous_df)
+                    
+                    # Add color coding for risk levels if available
+                    if 'RiskLevel' in anomalous_df.columns:
+                        def highlight_risk(val):
+                            if val == 'High':
+                                return 'background-color: #ff4444; color: white'
+                            elif val == 'Medium':
+                                return 'background-color: #ff8800; color: white'
+                            elif val == 'Low':
+                                return 'background-color: #44aa44; color: white'
+                            return ''
+                        styled_df = anomalous_df.style.applymap(highlight_risk, subset=['RiskLevel'])
+                        st.dataframe(styled_df)
+                    else:
+                        st.dataframe(anomalous_df)
             
             with tab2:
                 st.subheader("Suspicious Events")
@@ -219,7 +371,21 @@ if uploaded_file is not None:
                     # Format timestamp column
                     if 'Timestamp' in compromised_df.columns:
                         compromised_df['Timestamp'] = pd.to_datetime(compromised_df['Timestamp']).dt.strftime('%Y-%m-%d %H:%M:%S')
-                    st.dataframe(compromised_df)
+                    
+                    # Add color coding for risk levels if available
+                    if 'RiskLevel' in compromised_df.columns:
+                        def highlight_risk(val):
+                            if val == 'High':
+                                return 'background-color: #ff4444; color: white'
+                            elif val == 'Medium':
+                                return 'background-color: #ff8800; color: white'
+                            elif val == 'Low':
+                                return 'background-color: #44aa44; color: white'
+                            return ''
+                        styled_df = compromised_df.style.applymap(highlight_risk, subset=['RiskLevel'])
+                        st.dataframe(styled_df)
+                    else:
+                        st.dataframe(compromised_df)
                 else:
                     st.info("No suspicious events detected in the data.")
             
@@ -230,17 +396,58 @@ if uploaded_file is not None:
                     # Format timestamp column
                     if 'Timestamp' in files_df.columns:
                         files_df['Timestamp'] = pd.to_datetime(files_df['Timestamp']).dt.strftime('%Y-%m-%d %H:%M:%S')
-                    st.dataframe(files_df)
+                    
+                    # Add color coding for risk levels if available
+                    if 'RiskLevel' in files_df.columns:
+                        def highlight_risk(val):
+                            if val == 'High':
+                                return 'background-color: #ff4444; color: white'
+                            elif val == 'Medium':
+                                return 'background-color: #ff8800; color: white'
+                            elif val == 'Low':
+                                return 'background-color: #44aa44; color: white'
+                            return ''
+                        styled_df = files_df.style.applymap(highlight_risk, subset=['RiskLevel'])
+                        st.dataframe(styled_df)
+                    else:
+                        st.dataframe(files_df)
                 else:
                     st.info("No file access events found in the data.")
             
             with tab4:
                 st.subheader("All Events")
-                timeline_df = pd.DataFrame(timeline)
-                # Format timestamp column
+                timeline_df = pd.DataFrame(timeline_filtered)
+                # Format timestamp column and add new columns if they exist
                 if 'Timestamp' in timeline_df.columns:
                     timeline_df['Timestamp'] = pd.to_datetime(timeline_df['Timestamp']).dt.strftime('%Y-%m-%d %H:%M:%S')
-                st.dataframe(timeline_df)
+                
+                # Show additional analysis columns if present
+                if 'RiskLevel' in timeline_df.columns:
+                    # Reorder columns to show risk level and anomaly types prominently
+                    cols = list(timeline_df.columns)
+                    priority_cols = ['Timestamp', 'RiskLevel', 'AnomalyTypes', 'Operation', 'ClientIP', 'Country', 'UserId']
+                    new_order = []
+                    for col in priority_cols:
+                        if col in cols:
+                            new_order.append(col)
+                            cols.remove(col)
+                    new_order.extend(cols)
+                    timeline_df = timeline_df[new_order]
+                    
+                    # Add color coding for risk levels
+                    def highlight_risk(val):
+                        if val == 'High':
+                            return 'background-color: #ff4444; color: white'
+                        elif val == 'Medium':
+                            return 'background-color: #ff8800; color: white'
+                        elif val == 'Low':
+                            return 'background-color: #44aa44; color: white'
+                        return ''
+                    
+                    styled_df = timeline_df.style.applymap(highlight_risk, subset=['RiskLevel'])
+                    st.dataframe(styled_df)
+                else:
+                    st.dataframe(timeline_df)
             
             # Option to download results
             st.subheader("Download Results")

@@ -13,9 +13,15 @@ Preferred communication style: Simple, everyday language.
 - **File Upload System**: Supports CSV and Excel file uploads for audit log processing
 - **Interactive Visualizations**: 
   - Folium-based interactive maps for geospatial visualization
-  - Data tables for detailed analysis
+  - Data tables for detailed analysis with color-coded risk levels
   - Export functionality for analysis results in JSON format
 - **Session State Management**: Maintains processed data between re-renders to improve performance
+- **Advanced Filtering System**: Comprehensive sidebar filters including:
+  - Risk level filtering (High/Medium/Low)
+  - Anomaly type classification and filtering
+  - Geographic location exclusion filters
+  - Time-based filtering (business hours, weekends, custom ranges)
+  - IP pattern analysis (first-time, frequent, cross-country IPs)
 
 ## Backend Architecture
 - **Core Processing Engine**: Modular Python architecture with separate components:
@@ -42,7 +48,13 @@ Preferred communication style: Simple, everyday language.
 
 ## Security Features
 - **Anomaly Detection**: Identifies potentially compromised events based on IP activity patterns
-- **Risk Assessment**: Flags unusual access patterns and suspicious geographical locations
+- **Risk Assessment**: Advanced multi-factor risk scoring system that evaluates:
+  - Geographic risk (country-based threat assessment)
+  - Operation risk (suspicious activities like deletions, failed logins)
+  - Temporal risk (outside business hours, weekend activity)
+  - Combined risk scoring with High/Medium/Low classifications
+- **Custom Filtering**: Users can focus on specific types of threats and anomalies
+- **Visual Risk Indicators**: Color-coded data tables showing risk levels at a glance
 - **Data Privacy**: Local processing without external API calls for sensitive audit data
 
 # External Dependencies

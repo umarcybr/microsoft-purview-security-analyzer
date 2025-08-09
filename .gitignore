@@ -48,8 +48,7 @@ Thumbs.db
 # Streamlit
 .streamlit/secrets.toml
 
-# Data files (users should download their own GeoLite2 database)
-attached_assets/GeoLite2-City.mmdb
+# GeoLite2 database is included for user convenience
 
 # Temporary files
 temp_*

@@ -39,23 +39,17 @@ Then install with:
 pip install -r requirements.txt
 ```
 
-## Required Data Files
+## Data Files
 
-### GeoLite2 Database Setup
+### GeoLite2 Database
 
-**Important**: You must download the GeoLite2 database file manually:
+The GeoLite2-City.mmdb database file is **included** in the repository for your convenience. No additional download is required!
 
-1. Visit [MaxMind GeoLite2](https://dev.maxmind.com/geoip/geoip2/geolite2/)
-2. Create a free account
-3. Download the **GeoLite2-City.mmdb** file
-4. Create the `attached_assets` directory in your project folder
-5. Place the downloaded file at: `attached_assets/GeoLite2-City.mmdb`
-
-**File structure should be**:
+**File structure**:
 ```
 microsoft-purview-security-analyzer/
 ├── attached_assets/
-│   └── GeoLite2-City.mmdb  # You must download this
+│   └── GeoLite2-City.mmdb  # Included in repository
 ├── app_new.py
 ├── security_analyzer.py
 └── ...
@@ -80,8 +74,9 @@ streamlit run app_new.py
 - Make sure all dependencies are installed: `pip install streamlit pandas folium streamlit-folium geoip2 openpyxl trafilatura`
 
 **2. "FileNotFoundError: GeoLite2-City.mmdb"**
-- Download the GeoLite2 database file as described above
-- Ensure it's placed in the correct location: `attached_assets/GeoLite2-City.mmdb`
+- The database file should be included in the repository
+- Verify the file exists at: `attached_assets/GeoLite2-City.mmdb`
+- If missing, you can download it from [MaxMind GeoLite2](https://dev.maxmind.com/geoip/geoip2/geolite2/)
 
 **3. "Port already in use"**
 - If port 8501 is busy, Streamlit will automatically use the next available port

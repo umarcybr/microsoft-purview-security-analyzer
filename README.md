@@ -30,10 +30,7 @@ cd microsoft-purview-security-analyzer
 pip install streamlit pandas folium streamlit-folium geoip2 openpyxl trafilatura
 ```
 
-3. Download the GeoLite2 database:
-   - Visit [MaxMind GeoLite2](https://dev.maxmind.com/geoip/geoip2/geolite2/)
-   - Download the GeoLite2-City.mmdb file
-   - Place it in the `attached_assets/` directory
+3. The GeoLite2 database is included in the repository for convenience
 
 ## Usage
 
@@ -65,7 +62,7 @@ microsoft-purview-security-analyzer/
 ├── app_new.py                 # Main Streamlit application
 ├── security_analyzer.py      # Core analysis functions
 ├── attached_assets/           # Data files and assets
-│   └── GeoLite2-City.mmdb   # GeoIP database (required)
+│   └── GeoLite2-City.mmdb   # GeoIP database (included)
 ├── .streamlit/
 │   └── config.toml           # Streamlit configuration
 ├── pyproject.toml            # Python dependencies
@@ -101,6 +98,9 @@ This tool provides:
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+### Third-Party Data
+This product includes GeoLite2 data created by MaxMind, available from [https://www.maxmind.com](https://www.maxmind.com). The GeoLite2 database is licensed under the [Creative Commons Attribution-ShareAlike 4.0 International License](https://creativecommons.org/licenses/by-sa/4.0/).
 
 ## Disclaimer
 

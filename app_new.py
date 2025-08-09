@@ -21,13 +21,13 @@ if 'anomalous_ips' not in st.session_state:
 
 # Set page configuration
 st.set_page_config(
-    page_title="LTI: Vericel Security Analyzer",
+    page_title="Microsoft Purview Security Analyzer",
     page_icon="🔒",
     layout="wide"
 )
 
 # Title and description
-st.title("LTI: Vericel Security Analyzer")
+st.title("Microsoft Purview Security Analyzer")
 st.markdown("""
 This tool helps identify anomalous IP activities and potentially compromised events in audit logs.
 Upload your CSV or Excel file to analyze the data and visualize suspicious activities on the map.

@@ -36,6 +36,8 @@ Preferred communication style: Simple, everyday language.
   - Timeline creation with geolocation enrichment
   - Anomaly detection algorithms for IP activity analysis
 
+![ip-preview](images/ip-events.png)
+
 ## Data Storage Solutions
 - **File-based Processing**: No persistent database; processes uploaded files in memory
 - **Temporary File Handling**: Uses Python's tempfile module for secure file processing
@@ -47,6 +49,8 @@ Preferred communication style: Simple, everyday language.
   - Private IP detection and filtering
   - Known IP registry for common addresses
   - Geolocation enrichment for public IP addresses
+
+![Geo-Location-Preview](images/geo-location.png)
 
 ## Security Features
 - **Anomaly Detection**: Identifies potentially compromised events based on IP activity patterns

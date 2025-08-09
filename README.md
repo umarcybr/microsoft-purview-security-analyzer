@@ -74,6 +74,10 @@ microsoft-purview-security-analyzer/
 └── README.md                 # This file
 ```
 
+## GitHub Repository
+
+This project is ready for GitHub upload. See [GITHUB_UPLOAD_GUIDE.md](GITHUB_UPLOAD_GUIDE.md) for detailed step-by-step instructions on how to upload this project to GitHub.
+
 ## Analysis Capabilities
 
 This tool provides:

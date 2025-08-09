@@ -16,7 +16,7 @@ def create_ip_map(ip_events):
         A folium map object
     """
     # Create base map centered at a default location
-    m = folium.Map(location=[20, 0], zoom_start=2)
+    m = folium.Map(location=[20, 0], zoom_start=2, )
     
     # Add marker clusters to handle many points
     marker_cluster = MarkerCluster().add_to(m)

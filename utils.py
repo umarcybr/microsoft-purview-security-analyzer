@@ -164,3 +164,4 @@ def filter_files_accessed(timeline):
 def filter_anomalous_ips(timeline):
     """Return only events where the IP is considered anomalous per our criteria."""
     return [event for event in timeline if is_ip_anomalous(event)]
+

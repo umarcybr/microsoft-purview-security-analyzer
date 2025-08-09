@@ -64,8 +64,13 @@ microsoft-purview-security-analyzer/
 ├── attached_assets/           # Data files and assets
 │   └── GeoLite2-City.mmdb   # GeoIP database (included)
 ├── .streamlit/
-│   └── config.toml           # Streamlit configuration
-├── pyproject.toml            # Python dependencies
+│   └── config.toml           # Streamlit configuration (dark theme)
+├── pyproject.toml            # Python project configuration
+├── setup.py                  # Installation setup script
+├── INSTALLATION.md           # Detailed installation guide
+├── CONTRIBUTING.md           # Contribution guidelines
+├── DEPLOYMENT.md             # Deployment options
+├── DEVELOPMENT.md            # Development guide
 └── README.md                 # This file
 ```
 

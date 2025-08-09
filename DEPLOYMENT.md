@@ -27,8 +27,7 @@ streamlit run app_new.py
 
 **Requirements**:
 - Public GitHub repository
-- Add GeoLite2-City.mmdb to .gitignore (users download separately)
-- Configure secrets for any API keys
+- Configure secrets for any API keys if needed
 
 ### 2. Heroku
 

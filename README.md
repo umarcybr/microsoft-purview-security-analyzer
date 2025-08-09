@@ -1,120 +1,84 @@
-# Microsoft Purview Security Analyzer
+# Overview
 
-A web-based security analysis tool that leverages Streamlit to process CSV/Excel files and visualize anomalous IP activities with interactive mapping capabilities.
+The Microsoft Purview Security Analyzer is a web-based security analysis tool built with Streamlit that processes audit log files (CSV/Excel) to identify anomalous IP activities and potential security breaches. The application provides interactive geospatial mapping capabilities to visualize suspicious activities on a world map, helping security analysts identify potentially compromised events and unusual access patterns.
 
-## Features
+# User Preferences
 
-- **Interactive Geospatial Mapping**: Visualize suspicious IP activities on an interactive world map
-- **File Processing**: Support for CSV and Excel files containing audit logs
-- **Anomaly Detection**: Identify potentially compromised events and anomalous IP addresses
-- **Data Visualization**: Interactive tables and charts for detailed analysis
-- **Export Functionality**: Download analysis results in JSON format
+Preferred communication style: Simple, everyday language.
 
-## Installation
+# System Architecture
 
-### Prerequisites
+## Frontend Architecture
+- **Framework**: Streamlit-based web application providing an interactive dashboard
+- **File Upload System**: Supports CSV and Excel file uploads for audit log processing
+- **Interactive Visualizations**: 
+  - Folium-based interactive maps for geospatial visualization
+  - Data tables for detailed analysis with color-coded risk levels
+  - Export functionality for analysis results in JSON format
+- **Session State Management**: Maintains processed data between re-renders to improve performance
+- **Advanced Filtering System**: Comprehensive sidebar filters including:
+  - Risk level filtering (High/Medium/Low)
+  - Anomaly type classification and filtering
+  - Geographic location exclusion filters
+  - Time-based filtering (business hours, weekends, custom ranges)
+  - IP pattern analysis (first-time, frequent, cross-country IPs)
 
-- Python 3.8 or higher
-- pip package manager
+## Backend Architecture
+- **Core Processing Engine**: Modular Python architecture with separate components:
+  - `security_analyzer.py`: Main analysis logic for detecting compromised events and anomalous IPs
+  - `processor.py`: File parsing and data processing utilities
+  - `utils/`: Utility modules for file processing, IP analysis, and map generation
+- **Data Processing Pipeline**:
+  - Audit log parsing from CSV/Excel files
+  - JSON data extraction from AuditData fields
+  - Timeline creation with geolocation enrichment
+  - Anomaly detection algorithms for IP activity analysis
 
-### Setup
+## Data Storage Solutions
+- **File-based Processing**: No persistent database; processes uploaded files in memory
+- **Temporary File Handling**: Uses Python's tempfile module for secure file processing
+- **Session State**: Streamlit session state for maintaining processed data during user sessions
 
-1. Clone this repository:
-```bash
-git clone https://github.com/yourusername/microsoft-purview-security-analyzer.git
-cd microsoft-purview-security-analyzer
-```
+## Geolocation Services
+- **GeoIP Database**: Integrates MaxMind's GeoLite2-City.mmdb database for IP geolocation
+- **IP Analysis**: 
+  - Private IP detection and filtering
+  - Known IP registry for common addresses
+  - Geolocation enrichment for public IP addresses
 
-2. Install required packages:
-```bash
-pip install streamlit pandas folium streamlit-folium geoip2 openpyxl trafilatura
-```
+## Security Features
+- **Anomaly Detection**: Identifies potentially compromised events based on IP activity patterns
+- **Risk Assessment**: Advanced multi-factor risk scoring system that evaluates:
+  - Geographic risk (country-based threat assessment)
+  - Operation risk (suspicious activities like deletions, failed logins)
+  - Temporal risk (outside business hours, weekend activity)
+  - Combined risk scoring with High/Medium/Low classifications
+- **Custom Filtering**: Users can focus on specific types of threats and anomalies
+- **Visual Risk Indicators**: Color-coded data tables showing risk levels at a glance
+- **Data Privacy**: Local processing without external API calls for sensitive audit data
 
-3. The GeoLite2 database is included in the repository for convenience
+# External Dependencies
 
-## Usage
+## Core Libraries
+- **Streamlit**: Web application framework for the user interface
+- **Pandas**: Data manipulation and analysis for processing audit logs
+- **Folium**: Interactive mapping library for geospatial visualizations
+- **streamlit-folium**: Integration between Streamlit and Folium maps
 
-1. Start the application:
-```bash
-streamlit run app_new.py
-```
+## Geolocation Services
+- **GeoIP2**: MaxMind's Python library for IP geolocation lookups
+- **GeoLite2-City.mmdb**: MaxMind's geolocation database (included in repository)
 
-2. Open your web browser and navigate to `http://localhost:8501`
+## File Processing
+- **OpenPyXL**: Excel file reading and processing capabilities
+- **Trafilatura**: Text extraction and processing utilities
 
-3. Upload your CSV or Excel file containing audit logs
+## Deployment Platforms
+- **Streamlit Cloud**: Recommended deployment platform for easy hosting
+- **Heroku**: Alternative cloud deployment option
+- **Local Development**: Standard Python environment with pip dependencies
 
-4. Analyze the results in the interactive dashboard
-
-## Expected Data Format
-
-The uploaded file should contain audit log data with at least the following columns:
-- **CreationDate**: Timestamp of the event
-- **Operation**: Type of operation performed
-- **UserId**: User identifier
-- **AuditData**: JSON data containing details like ClientIP
-
-Additional columns will be utilized if available.
-
-## File Structure
-
-```
-microsoft-purview-security-analyzer/
-├── app_new.py                 # Main Streamlit application
-├── security_analyzer.py      # Core analysis functions
-├── attached_assets/           # Data files and assets
-│   └── GeoLite2-City.mmdb   # GeoIP database (included)
-├── .streamlit/
-│   └── config.toml           # Streamlit configuration (dark theme)
-├── pyproject.toml            # Python project configuration
-├── setup.py                  # Installation setup script
-├── INSTALLATION.md           # Detailed installation guide
-├── CONTRIBUTING.md           # Contribution guidelines
-├── DEPLOYMENT.md             # Deployment options
-├── DEVELOPMENT.md            # Development guide
-└── README.md                 # This file
-```
-
-## GitHub Repository
-
-This project is ready for GitHub upload. See [GITHUB_UPLOAD_GUIDE.md](GITHUB_UPLOAD_GUIDE.md) for detailed step-by-step instructions on how to upload this project to GitHub.
-
-## Analysis Capabilities
-
-This tool provides:
-
-1. **Anomalous IP Detection**: Identify IP addresses with unusual geographic patterns
-2. **Compromised Event Detection**: Flag potentially suspicious activities
-3. **File Access Tracking**: Monitor file operations and access patterns
-4. **Interactive Mapping**: Visualize geographic distribution of security events
-5. **Detailed Reporting**: Generate comprehensive analysis reports
-
-## Technologies Used
-
-- **Streamlit**: Web application framework
-- **Folium**: Interactive mapping
-- **Pandas**: Data manipulation and analysis
-- **GeoIP2**: IP geolocation services
-- **Trafilatura**: Web content extraction
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-### Third-Party Data
-This product includes GeoLite2 data created by MaxMind, available from [https://www.maxmind.com](https://www.maxmind.com). The GeoLite2 database is licensed under the [Creative Commons Attribution-ShareAlike 4.0 International License](https://creativecommons.org/licenses/by-sa/4.0/).
-
-## Disclaimer
-
-This tool is for educational and legitimate security analysis purposes only. Users are responsible for ensuring compliance with all applicable laws and regulations when analyzing data.
-
-## Support
-
-For questions or issues, please open an issue on the GitHub repository.
+## Development Tools
+- **Git**: Version control system
+- **Python 3.8+**: Minimum runtime requirement
+- **Virtual Environment**: Recommended for dependency isolation

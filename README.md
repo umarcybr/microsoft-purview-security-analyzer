@@ -4,10 +4,6 @@ The Microsoft Purview Security Analyzer is a web-based security analysis tool bu
 
 ![App Preview](images/app-preview.png)
 
-# User Preferences
-
-Preferred communication style: Simple, everyday language.
-
 # System Architecture
 
 ## Frontend Architecture

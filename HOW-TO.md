@@ -21,7 +21,7 @@ A web-based security analysis tool that leverages Streamlit to process CSV/Excel
 
 1. Clone this repository:
 ```bash
-git clone https://github.com/yourusername/microsoft-purview-security-analyzer.git
+git clone https://github.com/umarcybr/microsoft-purview-security-analyzer.git
 cd microsoft-purview-security-analyzer
 ```
 

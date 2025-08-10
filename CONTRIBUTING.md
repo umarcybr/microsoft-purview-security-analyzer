@@ -15,7 +15,7 @@ Thank you for your interest in contributing to the Microsoft Purview Security An
 1. **Fork the repository** on GitHub
 2. **Clone your fork locally**:
 ```bash
-git clone https://github.com/yourusername/microsoft-purview-security-analyzer.git
+git clone https://github.com/umarcybr/microsoft-purview-security-analyzer.git
 cd microsoft-purview-security-analyzer
 ```
 3. **Create a virtual environment**:

@@ -6,7 +6,7 @@
 
 1. **Clone the repository**:
 ```bash
-git clone https://github.com/yourusername/microsoft-purview-security-analyzer.git
+git clone https://github.com/umarcybr/microsoft-purview-security-analyzer.git
 cd microsoft-purview-security-analyzer
 ```
 

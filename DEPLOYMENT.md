@@ -6,7 +6,7 @@ This guide covers various deployment options for the Microsoft Purview Security 
 
 ### Quick Start
 ```bash
-git clone https://github.com/yourusername/microsoft-purview-security-analyzer.git
+git clone https://github.com/umarcybr/microsoft-purview-security-analyzer.git
 cd microsoft-purview-security-analyzer
 pip install streamlit pandas folium streamlit-folium geoip2 openpyxl trafilatura
 streamlit run app_new.py

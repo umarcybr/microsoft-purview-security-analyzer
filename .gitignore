@@ -45,12 +45,6 @@ venv.bak/
 ehthumbs.db
 Thumbs.db
 
-# Replit-specific files (for those who fork from Replit)
-.replit
-uv.lock
-.upm/
-.pythonlibs/
-
 # Streamlit
 .streamlit/secrets.toml
 
